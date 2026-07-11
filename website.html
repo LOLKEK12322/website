@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор метаданных файлов</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #555;
+        }
+        input[type="text"], 
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .info-text {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+        #editorSection {
+            display: none; /* Скрыто до загрузки файла */
+            margin-top: 20px;
+            border-top: 2px dashed #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Редактор файлов (Client-Side)</h2>
+        <p class="info-text">Выберите файл. Все операции происходят локально в вашем браузере, данные никуда не отправляются.</p>
+        
+        <input type="file" id="fileInput">
+
+        <div id="editorSection">
+            <div class="form-group">
+                <label for="fileName">Имя файла:</label>
+                <input type="text" id="fileName">
+            </div>
+            
+            <div class="form-group">
+                <label for="fileType">MIME-тип (формат):</label>
+                <input type="text" id="fileType">
+            </div>
+
+            <div class="form-group">
+                <label>Размер файла (не редактируется):</label>
+                <input type="text" id="fileSize" disabled>
+            </div>
+
+            <button id="downloadBtn">Скачать измененный файл</button>
+            <p class="info-text">Примечание: дата создания/изменения скачанного файла будет установлена вашей операционной системой текущим моментом загрузки из-за настроек безопасности браузеров.</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const editorSection = document.getElementById('editorSection');
+        const fileNameInput = document.getElementById('fileName');
+        const fileTypeInput = document.getElementById('fileType');
+        const fileSizeInput = document.getElementById('fileSize');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let currentFile = null;
+
+        // Форматирование размера файла
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        // Обработка выбора файла
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            currentFile = file;
+
+            // Заполняем поля метаданными
+            fileNameInput.value = file.name;
+            fileTypeInput.value = file.type || 'unknown';
+            fileSizeInput.value = formatBytes(file.size);
+
+            // Показываем секцию редактора
+            editorSection.style.display = 'block';
+        });
+
+        // Скачивание "нового" файла
+        downloadBtn.addEventListener('click', () => {
+            if (!currentFile) return;
+
+            const newName = fileNameInput.value.trim() || 'unnamed_file';
+            const newType = fileTypeInput.value.trim();
+
+            // Создаем новый объект файла с измененными параметрами
+            // Blob позволяет собрать файл из исходных бинарных данных
+            const modifiedBlob = new Blob([currentFile], { type: newType });
+            
+            // Создаем временную ссылку для скачивания
+            const downloadUrl = URL.createObjectURL(modifiedBlob);
+            
+            // Создаем невидимый тег <a> для программного клика
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.download = newName; // Указываем новое имя файла
+            
+            document.body.appendChild(a);
+            a.click(); // Эмулируем клик
+            
+            // Очищаем память
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+            }, 100);
+        });
+    </script>
+</body>
+</html>
